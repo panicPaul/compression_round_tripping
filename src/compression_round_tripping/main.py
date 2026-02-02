@@ -1,14 +1,15 @@
 """Small script to test compression round tripping."""
 
+import json
 import subprocess
 import time
 from pathlib import Path
-from typing import Literal
+from typing import Literal, get_args
 
 import spz
 import tyro
 from beartype import beartype
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 
 EligibleFileFormats = Literal["spz", "sog", "ply", "cply"]
 EligibleCompressionFormats = Literal["sog", "spz", "cply"]
@@ -41,6 +42,9 @@ class CompressionStatistics(BaseModel):
     compressed_size_mb: float
     compression_ratio: float
     compression_time_seconds: float
+    compression_format: EligibleCompressionFormats
+    input_file: Path
+    output_file: Path
 
     def __str__(self) -> str:
         """Print the statistics in a pretty format."""
@@ -48,8 +52,16 @@ class CompressionStatistics(BaseModel):
             f"Original size: {self.original_size_mb:.2f} MB\n"
             f"Compressed size: {self.compressed_size_mb:.2f} MB\n"
             f"Compression ratio: {self.compression_ratio:.2f}\n"
-            f"Compression time: {self.compression_time_seconds:.2f} seconds"
+            f"Compression time: {self.compression_time_seconds:.2f} seconds\n"
+            f"Compression format: {self.compression_format}\n"
+            f"Input file: {self.input_file}\n"
+            f"Output file: {self.output_file}"
         )
+
+    @field_serializer("input_file", "output_file")
+    def path_serializer(self, v: Path) -> str:
+        """Serializes paths to absolute paths in string format."""
+        return str(v.absolute())
 
 
 class SpzOptions(BaseModel):
@@ -184,14 +196,53 @@ def round_trip_compression(
         compressed_size_mb=intermediate_file.stat().st_size / 1024 / 1024,
         compression_ratio=input_file.stat().st_size / intermediate_file.stat().st_size,
         compression_time_seconds=end_time - start_time,
+        compression_format=compression_format,
+        input_file=input_file,
+        output_file=output_file,
     )
 
     # serialize the statistics to a json file
     compression_statistics_path = output_file.with_name(
         f"{output_file.stem}_compression_statistics.json"
     )
+    statistics_dict = {}
+    if compression_statistics_path.exists():
+        with compression_statistics_path.open("r") as f:
+            try:
+                statistics_dict = json.load(f)
+            except json.JSONDecodeError as err:
+                if not overwrite:
+                    msg = f"Corrupted stats file: {compression_statistics_path}"
+                    raise ValueError(msg) from err
+                statistics_dict = {}
+
+        eligible_formats = get_args(EligibleCompressionFormats)
+        keys_to_delete = []
+
+        for key, value in statistics_dict.items():
+            is_valid_key = key in eligible_formats
+            is_valid_value = True
+            try:
+                CompressionStatistics.model_validate(value)
+            except Exception:
+                is_valid_value = False
+
+            if not (is_valid_key and is_valid_value):
+                if overwrite:
+                    keys_to_delete.append(key)
+                else:
+                    msg = f"Invalid statistic for key '{key}' in {compression_statistics_path}"
+                    raise ValueError(msg)
+
+        for key in keys_to_delete:
+            del statistics_dict[key]
+
+    # overwrite the statistic regardless of the overwrite flag
+    statistics_dict[compression_format] = compression_statistics.model_dump()
+
+    # dump back into a single json file
     with compression_statistics_path.open("w") as f:
-        f.write(compression_statistics.model_dump_json(indent=4))
+        json.dump(statistics_dict, f, indent=4)
 
     return compression_statistics
 
