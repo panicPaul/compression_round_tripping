@@ -1,6 +1,7 @@
 # custom
 test_data
 benchmark_test
+test_output
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

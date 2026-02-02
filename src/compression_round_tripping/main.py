@@ -185,7 +185,7 @@ def round_trip_compression(  # noqa: C901, PLR0912
         input_file: The file to compress and decompress.
         compression_format: The compression format to use.
         compressed_file: The file to output the compressed file to. Defaults to
-            "{decompressed_file.stem}.{compression_format}" in the same directory as decompressed_file.
+            "{input_file.stem}.{compression_format}" in the same directory as the input file.
         decompressed_file: The file to output the decompressed file to. Defaults to
             "{input_file.stem}_decompressed_{compression_format}.ply" in the same directory.
         overwrite: Whether to overwrite the output file if it exists.
