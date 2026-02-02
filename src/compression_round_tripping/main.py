@@ -2,17 +2,12 @@
 
 import subprocess
 import time
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import beartype
-import numpy as np
 import spz
 import tyro
 from beartype import beartype
-from jaxtyping import Float
-from plyfile import PlyData, PlyElement
 from pydantic import BaseModel
 
 EligibleFileFormats = Literal["spz", "sog", "ply", "cply"]
@@ -61,57 +56,6 @@ class SpzOptions(BaseModel):
     """Options for SPZ compression."""
 
     trained_with_anti_aliasing: bool = False
-
-
-@beartype
-@dataclass
-class SplatsFormat:
-    """Format for the splats, needed for the spz to ply conversion."""
-
-    xyz: Float[np.ndarray, "N 3"]
-    features_dc: Float[np.ndarray, "N 3"]
-    features_rest: Float[np.ndarray, "N sh_coeffs"]
-    opacities: Float[np.ndarray, "N 1"]
-    scales: Float[np.ndarray, "N 3"]
-    rotation: Float[np.ndarray, "N 4"]
-
-    def save_ply(self, path: Path, *, overwrite: bool = False) -> None:
-        """Save the splats to a ply file."""
-        if path.exists() and not overwrite:
-            msg = "Output file already exists."
-            raise ValueError(msg)
-        if path.exists() and overwrite:
-            path.unlink()
-
-        xyz = self.xyz
-        normals = np.zeros_like(xyz)
-        f_dc = self.features_dc.reshape(-1, 3)
-        f_rest = self.features_rest.reshape(-1, self.features_rest.shape[1])
-        opacities = self.opacities
-        scale = self.scales
-        rotation = self.rotation
-
-        l = ["x", "y", "z", "nx", "ny", "nz"]
-        # All channels except the 3 DC
-        for i in range(f_dc.shape[1]):
-            l.append("f_dc_{}".format(i))
-        for i in range(f_rest.shape[1]):
-            l.append("f_rest_{}".format(i))
-        l.append("opacity")
-        for i in range(scale.shape[1]):
-            l.append("scale_{}".format(i))
-        for i in range(rotation.shape[1]):
-            l.append("rot_{}".format(i))
-
-        dtype_full = [(attribute, "f4") for attribute in l]
-
-        elements = np.empty(xyz.shape[0], dtype=dtype_full)
-        attributes = np.concatenate(
-            (xyz, normals, f_dc, f_rest, opacities, scale, rotation), axis=1
-        )
-        elements[:] = list(map(tuple, attributes))
-        el = PlyElement.describe(elements, "vertex")
-        PlyData([el]).write(str(path))
 
 
 def _file_names_sanity_check(
@@ -197,17 +141,10 @@ def compress_spz(input_file: Path, output_file: Path, *, overwrite: bool = False
 def decompress_spz(input_file: Path, output_file: Path, *, overwrite: bool = False) -> None:
     """Decompress a file using SPZ compression."""
     _file_names_sanity_check(input_file, output_file, "spz", "ply", overwrite=overwrite)
+
     spz_splats = spz.load_spz(str(input_file))
-    num_points = spz_splats.positions.shape[0] // 3
-    splats = SplatsFormat(
-        xyz=spz_splats.positions.reshape(num_points, 3),
-        features_dc=spz_splats.colors.reshape(num_points, 3),
-        features_rest=spz_splats.sh.reshape(num_points, -1),
-        opacities=spz_splats.alphas.reshape(num_points, 1),
-        scales=spz_splats.scales.reshape(num_points, 3),
-        rotation=spz_splats.rotations.reshape(num_points, 4),
-    )
-    splats.save_ply(output_file)
+    pack_options = spz.PackOptions()
+    spz.save_splat_to_ply(spz_splats, pack_options, str(output_file))
 
 
 @beartype
