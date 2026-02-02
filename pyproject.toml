@@ -1,0 +1,74 @@
+[project]
+name = "compression_round_tripping"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Paul Schlack", email = "paul.schlack@me.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "beartype>=0.22.5",
+    "pydantic>=2.12.5",
+    "spz>=1.1.0",
+    "tyro>=1.0.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 99
+fix = true
+
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ERA001",
+    "D211",
+    "D213",
+    "D203",
+    "COM812",
+    "S101",
+    "D413",
+    "F722",
+    "D401",
+    "BLE001",
+    "PLR2004",
+    "S110",
+    "PLR0915",
+    "PLR0913",
+    "TD003",
+    "TC002",
+    "TC003",
+    "FIX002",
+    "RET504",
+    "PYI041",
+    "T201", # printing allowed since this is experimental code
+    "RUF046", # clashes with warp
+    "UP018", # clashes with warp
+    "S603", # security check that raises false positives too often
+]
+exclude = []
+
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "double"
+docstring-code-line-length = 79
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "D104"]
+"tests/*" = ["SLF001", "ANN001", "ANN201", "ANN204"]
+
+
+[tool.marimo.runtime]
+output_max_bytes = 10_000_000
+
+[tool.uv.sources]
+spz = { git = "https://github.com/nianticlabs/spz.git" }
+
+[tool.uv.extra-build-dependencies]
+spz = ["setuptools"]

@@ -1,2 +1,8 @@
-# compression_round_tripping
-Small script for compression round-tripping
+# Instalation
+
+Install `splat-transform` from npm:
+
+```bash
+npm install -g @playcanvas/splat-transform
+```
+
