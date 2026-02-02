@@ -1,6 +1,7 @@
 """Small script to test compression round tripping."""
 
 import json
+import platform
 import subprocess
 import time
 from pathlib import Path
@@ -15,26 +16,6 @@ EligibleFileFormats = Literal["spz", "sog", "ply", "cply"]
 EligibleCompressionFormats = Literal["sog", "spz", "cply"]
 
 
-class Arguments(BaseModel):
-    """Arguments for the script.
-
-    Args:
-        input_file: Path to the input file.
-        intermediate_directory: Path to the intermediate directory. Must not include a file that
-            has the same name as the input file.
-        output_directory: Path to the output directory. Must not include any file name that has
-            the same name as the input file.
-        compression_format: Compression format to use.
-        overwrite: Whether to overwrite the output file if it already exists.
-    """
-
-    input_file: Path
-    intermediate_directory: Path
-    output_directory: Path
-    compression_format: EligibleCompressionFormats
-    overwrite: bool = False
-
-
 class CompressionStatistics(BaseModel):
     """Statistics for the compression."""
 
@@ -42,9 +23,13 @@ class CompressionStatistics(BaseModel):
     compressed_size_mb: float
     compression_ratio: float
     compression_time_seconds: float
+    decompression_time_seconds: float
     compression_format: EligibleCompressionFormats
     input_file: Path
-    output_file: Path
+    compressed_file: Path
+    decompressed_file: Path
+    cpu_name: str
+    gpu_name: str
 
     def __str__(self) -> str:
         """Print the statistics in a pretty format."""
@@ -53,12 +38,16 @@ class CompressionStatistics(BaseModel):
             f"Compressed size: {self.compressed_size_mb:.2f} MB\n"
             f"Compression ratio: {self.compression_ratio:.2f}\n"
             f"Compression time: {self.compression_time_seconds:.2f} seconds\n"
+            f"Decompression time: {self.decompression_time_seconds:.2f} seconds\n"
             f"Compression format: {self.compression_format}\n"
             f"Input file: {self.input_file}\n"
-            f"Output file: {self.output_file}"
+            f"Compressed file: {self.compressed_file}\n"
+            f"Decompressed file: {self.decompressed_file}\n"
+            f"CPU name: {self.cpu_name}\n"
+            f"GPU name: {self.gpu_name}"
         )
 
-    @field_serializer("input_file", "output_file")
+    @field_serializer("input_file", "compressed_file", "decompressed_file")
     def path_serializer(self, v: Path) -> str:
         """Serializes paths to absolute paths in string format."""
         return str(v.absolute())
@@ -82,19 +71,24 @@ def _file_names_sanity_check(
     if input_file.name == output_file.name:
         msg = "Input and output file names must be different."
         raise ValueError(msg)
+
     if input_file.suffix != f".{input_format}":
         msg = f"Input file must have extension .{input_format}."
         raise ValueError(msg)
+
     if output_file.suffix != f".{output_format}":
         msg = f"Output file must have extension .{output_format}."
         raise ValueError(msg)
+
     if output_file.exists() and not overwrite:
-        msg = "Output file already exists."
+        msg = f"Output file already exists: {output_file}"
         raise ValueError(msg)
+
     if output_file.exists() and overwrite:
         output_file.unlink()
+
     if not input_file.exists():
-        msg = "Input file does not exist."
+        msg = f"Input file does not exist: {input_file}"
         raise ValueError(msg)
 
 
@@ -159,52 +153,97 @@ def decompress_spz(input_file: Path, output_file: Path, *, overwrite: bool = Fal
     spz.save_splat_to_ply(spz_splats, pack_options, str(output_file))
 
 
+def get_cpu_name() -> str:
+    """Get the CPU name."""
+    return platform.processor() or "Unknown CPU"
+
+
+def get_gpu_name() -> str:
+    """Get the GPU name using nvidia-smi."""
+    try:
+        output = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"], text=True
+        )
+        return output.strip()
+    except (subprocess.SubprocessError, FileNotFoundError):
+        return "Unknown GPU"
+
+
 @beartype
-def round_trip_compression(
+def round_trip_compression(  # noqa: C901, PLR0912
     input_file: Path,
     compression_format: EligibleCompressionFormats,
     *,
+    compressed_file: Path | None = None,
+    decompressed_file: Path | None = None,
     overwrite: bool = False,
     use_cpu: bool = False,
 ) -> CompressionStatistics:
-    """Compress and decompress a file using SOG compression."""
-    # TODO: fix local GPU support (is it just 5090 Shenanigans?)
-    intermediate_file = input_file.with_suffix(f".{compression_format}")
-    output_file = input_file.with_name(f"{input_file.stem}_round_trip.ply")
+    """Compress and decompress a file using SOG compression.
+
+    Args:
+        input_file: The file to compress and decompress.
+        compression_format: The compression format to use.
+        compressed_file: The file to output the compressed file to. Defaults to
+            "{decompressed_file.stem}.{compression_format}" in the same directory as decompressed_file.
+        decompressed_file: The file to output the decompressed file to. Defaults to
+            "{input_file.stem}_decompressed_{compression_format}.ply" in the same directory.
+        overwrite: Whether to overwrite the output file if it exists.
+        use_cpu: Whether to use the CPU for compression and decompression.
+    """
+    if decompressed_file is None:
+        decompressed_file = input_file.with_name(
+            f"{input_file.stem}_decompressed_{compression_format}.ply"
+        )
+        compression_statistics_path = input_file.parent / "compression_statistics.json"
+    else:
+        compression_statistics_path = decompressed_file.with_name(
+            f"{decompressed_file.stem}_compression_statistics.json"
+        )
+
+    if compressed_file is None:
+        compressed_file = input_file.with_suffix(f".{compression_format}")
+
+    # Ensure output directory exists (intermediate might be elsewhere, but output needs its dir)
+    decompressed_file.parent.mkdir(parents=True, exist_ok=True)
+    # Ensure intermediate directory exists
+    compressed_file.parent.mkdir(parents=True, exist_ok=True)
 
     # compress the file
     start_time = time.time()
     match compression_format:
         case "sog":
-            compress_sog(input_file, intermediate_file, overwrite=overwrite, use_cpu=use_cpu)
+            compress_sog(input_file, compressed_file, overwrite=overwrite, use_cpu=use_cpu)
         case "spz":
-            compress_spz(input_file, intermediate_file, overwrite=overwrite)
+            compress_spz(input_file, compressed_file, overwrite=overwrite)
         case "cply":
-            compress_cply(input_file, intermediate_file, overwrite=overwrite)
-    end_time = time.time()
+            compress_cply(input_file, compressed_file, overwrite=overwrite)
+    compression_time = time.time() - start_time
 
     # decompress the file
     match compression_format:
         case "sog":
-            decompress_sog(intermediate_file, output_file, overwrite=overwrite)
+            decompress_sog(compressed_file, decompressed_file, overwrite=overwrite)
         case "spz":
-            decompress_spz(intermediate_file, output_file, overwrite=overwrite)
+            decompress_spz(compressed_file, decompressed_file, overwrite=overwrite)
         case "cply":
-            decompress_cply(intermediate_file, output_file, overwrite=overwrite)
+            decompress_cply(compressed_file, decompressed_file, overwrite=overwrite)
+    decompression_time = time.time() - start_time
+
     compression_statistics = CompressionStatistics(
         original_size_mb=input_file.stat().st_size / 1024 / 1024,
-        compressed_size_mb=intermediate_file.stat().st_size / 1024 / 1024,
-        compression_ratio=input_file.stat().st_size / intermediate_file.stat().st_size,
-        compression_time_seconds=end_time - start_time,
+        compressed_size_mb=compressed_file.stat().st_size / 1024 / 1024,
+        compression_ratio=input_file.stat().st_size / compressed_file.stat().st_size,
+        compression_time_seconds=compression_time,
+        decompression_time_seconds=decompression_time,
         compression_format=compression_format,
         input_file=input_file,
-        output_file=output_file,
+        compressed_file=compressed_file,
+        decompressed_file=decompressed_file,
+        cpu_name=get_cpu_name(),
+        gpu_name=get_gpu_name(),
     )
 
-    # serialize the statistics to a json file
-    compression_statistics_path = output_file.with_name(
-        f"{output_file.stem}_compression_statistics.json"
-    )
     statistics_dict = {}
     if compression_statistics_path.exists():
         with compression_statistics_path.open("r") as f:
