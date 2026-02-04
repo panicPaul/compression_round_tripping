@@ -1,43 +1,56 @@
 #!/bin/bash
-#SBATCH --job-name=compression_benchmark
-#SBATCH --output=logs/%x_%j.out
-#SBATCH --error=logs/%x_%j.err
-#SBATCH --time=04:00:00
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
 
-# Hardcoded Paths
-DATA_DIR="/data/cluster/users/schlack/data/sparse_scenes/"
-OUTPUT_DIR="/data/cluster/users/schlack/data/sparse_scenes_compressed/"
+# --- Slurm Configuration ---
+#SBATCH --job-name=compression_benchmark
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=paul.schlack@hhi.fraunhofer.de
+#SBATCH --output=%j_%x.out
+#SBATCH --error=%j_%x.err
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --gpus=1
+#SBATCH --mem=32G
+#SBATCH --time=04:00:00
+
+# --- Hardcoded Paths ---
+DATA_DIR="/data/cluster/users/schlack/data/sparse_scenes"
+OUTPUT_DIR="/data/cluster/users/schlack/data/sparse_scenes_compressed"
 COMPRESSION_FORMATS="sog spz cply"
 
-# Ensure output directory and logs exist
+# --- Logging Setup ---
 mkdir -p "$OUTPUT_DIR/logs"
-
-# Redirect stdout and stderr to a log file in the output directory
-LOG_FILE="$OUTPUT_DIR/logs/benchmark_${SLURM_JOB_ID:-local}.log"
+LOG_FILE="$OUTPUT_DIR/logs/benchmark_${SLURM_JOB_ID}.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 echo "================================================================"
-echo "Running compression benchmark"
+echo "Starting Compression Benchmark"
+echo "Job ID: $SLURM_JOB_ID"
 echo "Host: $(hostname)"
-echo "Date: $(date)"
-echo "Input Directory: $DATA_DIR"
-echo "Output Directory: $OUTPUT_DIR"
-echo "Log File: $LOG_FILE"
+echo "Input: $DATA_DIR"
+echo "Output: $OUTPUT_DIR"
 echo "================================================================"
 
-# Loop over all .tar files in the data directory
+# --- Main Loop ---
+# We bind the parent directory so the container can reach both Input and Output dirs
+BIND_PATH="/data/cluster/users/schlack"
+
 for tar_file in "$DATA_DIR"/*.tar; do
+    # Check if file exists
     [ -e "$tar_file" ] || continue
     
-    echo "\n----------------------------------------------------------------"
-    echo "Processing archive: $tar_file"
-    echo "----------------------------------------------------------------\n"
-    
-    uv run src/compression_round_tripping/run_benchmark_compression.py \
+    FILENAME=$(basename "$tar_file")
+    echo "Processing: $FILENAME"
+
+    # Run Apptainer using ./image.sif directly
+    apptainer exec --nv --bind "$BIND_PATH" ./image.sif \
+        uv run src/compression_round_tripping/run_benchmark_compression.py \
         --source "$tar_file" \
         --output_dir "$OUTPUT_DIR" \
         --compression_formats "$COMPRESSION_FORMATS"
+        
+    echo "Finished: $FILENAME"
+    echo "----------------------------------------------------------------"
 done
+
+echo "Benchmark Complete."

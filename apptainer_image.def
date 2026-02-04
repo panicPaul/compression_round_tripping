@@ -10,6 +10,7 @@ From: ubuntu:24.04
     apt-get update 
     apt-get install -y curl ca-certificates nodejs npm
     apt-get install -y zlib1g-dev
+    apt-get install -y nvtop
 
     # 2. Install uv
     # Download the installer and pipe to sh
