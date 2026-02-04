@@ -11,11 +11,11 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
 #SBATCH --mem=32G
-#SBATCH --time=04:00:00
+#SBATCH --time=08:00:00
 
 # --- Hardcoded Paths ---
-DATA_DIR="/data/cluster/users/schlack/data/sparse_scenes"
-OUTPUT_DIR="/data/cluster/users/schlack/data/sparse_scenes_compressed"
+DATA_DIR="/data/cluster/users/schlack/sparse_scenes"
+OUTPUT_DIR="/data/cluster/users/schlack/sparse_scenes_compressed"
 COMPRESSION_FORMATS="sog spz cply"
 
 # --- Logging Setup ---
@@ -34,8 +34,19 @@ echo "================================================================"
 # --- Main Loop ---
 # We bind the parent directory so the container can reach both Input and Output dirs
 BIND_PATH="/data/cluster/users/schlack"
+# TAR_FILES= "$DATA_DIR"/*.tar
+TAR_FILES=(
+    "$DATA_DIR"/gsplat1M_speedyspa_erank_0_1.tar
+    "$DATA_DIR"/gsplat1M_speedyspa_erank_50_1.tar
+    "$DATA_DIR"/gsplat1M_speedyspa_erank_60_1.tar
+    "$DATA_DIR"/gsplat1M_speedyspa_erank_70_1.tar
+    "$DATA_DIR"/gsplat1M_speedyspa_erank_80_1.tar
+    "$DATA_DIR"/gsplat1M_speedyspa_erank_85_1.tar
+    "$DATA_DIR"/gsplat1M_speedyspa_erank_90_1.tar
+    "$DATA_DIR"/gsplat1M_speedyspa_erank_95_1.tar
+)
 
-for tar_file in "$DATA_DIR"/*.tar; do
+for tar_file in "$TAR_FILES"; do
     # Check if file exists
     [ -e "$tar_file" ] || continue
     
@@ -43,7 +54,7 @@ for tar_file in "$DATA_DIR"/*.tar; do
     echo "Processing: $FILENAME"
 
     # Run Apptainer using ./image.sif directly
-    apptainer exec --nv --bind "$BIND_PATH" image.sif \
+    apptainer exec --nv --bind "$BIND_PATH" image2.sif \
         uv run src/compression_round_tripping/run_benchmark_compression.py \
         --source "$tar_file" \
         --output_dir "$OUTPUT_DIR" \

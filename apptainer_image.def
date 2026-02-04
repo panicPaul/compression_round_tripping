@@ -1,20 +1,28 @@
 Bootstrap: docker
 From: ubuntu:24.04
+# Bootstrap: localimage
+# From: ./image.sif
 
 %post
     # Prevent interactive prompts (like timezone selection)
     export DEBIAN_FRONTEND=noninteractive
 
-    # 1. Update apt and install dependencies
+    # 1. Switch to the dynamic mirror redirector
+    sed -i 's|http://archive.ubuntu.com/ubuntu/|mirror://mirrors.ubuntu.com/mirrors.txt|g' /etc/apt/sources.list
+    
+    # 2. Force IPv4 (optional, but helps with 80ms+ latency issues)
+    echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4
+
+    # 3. Update apt and install dependencies
     apt-get update 
     apt-get install -y curl ca-certificates nodejs npm
     apt-get install -y zlib1g-dev
     apt-get install -y nvtop
     
     # we need the following for web-gpu passthrough
-    apt-get install -y libvulkan1 mesa-vulkan-drivers vulkan-tools libgl1 libegl1
+    apt-get install -y libvulkan1 mesa-vulkan-drivers vulkan-tools libgl1 libegl1 libnvidia-gl
 
-    # 2. Install uv
+    # 4. Install uv
     # Download the installer and pipe to sh
     curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -22,10 +30,10 @@ From: ubuntu:24.04
     mv /root/.local/bin/uv /usr/local/bin/uv
     mv /root/.local/bin/uvx /usr/local/bin/uvx
 
-    # 3. Install splat-transform
+    # 5. Install splat-transform
     npm install -g @playcanvas/splat-transform
 
-    # 4. Cleanup to reduce image size
+    # 6. Cleanup to reduce image size
     apt-get clean
     rm -rf /var/lib/apt/lists/*
     rm -rf /root/.local
@@ -39,4 +47,4 @@ From: ubuntu:24.04
 %labels
     Author User
     Version 1.2
-    Base Ubuntu 24.04
+    Base Ubuntu 24.04z

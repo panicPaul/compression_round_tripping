@@ -42,6 +42,7 @@ dependencies = [
     { name = "ruff" },
     { name = "spz" },
     { name = "tqdm" },
+    { name = "turm" },
     { name = "ty" },
     { name = "tyro" },
 ]
@@ -57,6 +58,7 @@ requires-dist = [
     { name = "spz", git = "https://github.com/nianticlabs/spz.git" },
     { name = "tqdm", specifier = ">=4.66.2" },
     { name = "tqdm", specifier = ">=4.67.3" },
+    { name = "turm", specifier = ">=0.11.0" },
     { name = "ty", specifier = ">=0.0.14" },
     { name = "tyro", specifier = ">=1.0.5" },
 ]
@@ -285,6 +287,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/09/a9/6ba95a270c6f1fbcd8dac228323f2777d886cb206987444e4bce66338dd4/tqdm-4.67.3.tar.gz", hash = "sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb", size = 169598, upload-time = "2026-02-03T17:35:53.048Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl", hash = "sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf", size = 78374, upload-time = "2026-02-03T17:35:50.982Z" },
+]
+
+[[package]]
+name = "turm"
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/9b/a773e88a35c95c7c0f88ca8fed96811b81fe2d87962cd529e42b46620332/turm-0.11.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:42dfab2a0be26c4db92909c29607387762667640ca9da5b559b79b6912579ef7", size = 1637452, upload-time = "2025-12-23T20:59:19.838Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/7f/905f72ff053891bdaae32688a394fefa1ff573aa5ff37027f36bf2abcea5/turm-0.11.0-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:f5c1e2086953760101e058e3f86d41554b0caf270a53dc68ffe8bd0f370fde44", size = 1599921, upload-time = "2025-12-23T20:59:22.006Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/44/6d3141327900dfca014f6007273ce286000a6545eabc542c3fea8352c85d/turm-0.11.0-py3-none-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e22fccc187caaab96fa04a8b057aa15cd96c5b81c1cce447bd6354b9bc584b45", size = 1801683, upload-time = "2025-12-23T20:59:27.763Z" },
+    { url = "https://files.pythonhosted.org/packages/08/b4/83306d025a6cccf788fbf11fa6b3cd12df9ccab495beba3f40bf481be29f/turm-0.11.0-py3-none-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:c52b912d90e207178c2417ac150cf8f5cea40620635beb5f9d1f5d1f368012f9", size = 1926630, upload-time = "2025-12-23T20:59:23.807Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/49/096444e09e595394be1695df4d9d1705c88bab41a9365c82afa511992a0d/turm-0.11.0-py3-none-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:a75d57b7a9c79d3d3d47612c9b7999de2531d99993b1487abb1309319924496e", size = 1750084, upload-time = "2025-12-23T20:59:26.103Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/98/739ede7457de13490330f27f115d0cdd54cd5ff475c9ad5c41df370169cd/turm-0.11.0-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d226fa6ecfcffaa6aec970196db3243445b7fd46c7d19c37e9e5af2be2525c6d", size = 1689132, upload-time = "2025-12-23T20:59:29.932Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/64/2a5a30a00b4eccc75d36c1e76f4603280f43c8967fd451d4a6ab4b9b6b7a/turm-0.11.0-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:ca1711d155e2ca8c0d61709a58448b445639dbd87ba231a040d476340a57b7bd", size = 1657330, upload-time = "2025-12-23T20:59:31.745Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/0b/64bc67597e27ad09d5bfd65965085f336d6644a4dfa8a780683eb2f1354c/turm-0.11.0-py3-none-musllinux_1_2_armv7l.whl", hash = "sha256:2b3ff3ea9d08b085e90475a7c72f2f40aee8711dee393bad53295757c19f6455", size = 1625593, upload-time = "2025-12-23T20:59:33.305Z" },
+    { url = "https://files.pythonhosted.org/packages/38/2d/03990a11b2181103d0b825daf0052d56dd9df273585907bf5e6adacfb294/turm-0.11.0-py3-none-musllinux_1_2_i686.whl", hash = "sha256:7450f526ae6c514da8c49112c75fed389dcb7c91637bb81b007a6eac80c88fa6", size = 1752216, upload-time = "2025-12-23T20:59:35.015Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/01/980bf9c9b0c90fef223abc46693af66628211bd414fcec72bdeac810fd2d/turm-0.11.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:9ef25272ee19acf6e39debe01edd6e0ddcbf51e9f1662cf6b2f252542366b198", size = 1774219, upload-time = "2025-12-23T20:59:36.618Z" },
 ]
 
 [[package]]

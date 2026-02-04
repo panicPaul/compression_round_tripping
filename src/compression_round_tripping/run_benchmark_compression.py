@@ -21,11 +21,23 @@ def run_benchmark(
     output_dir: Path,
     compression_formats: list[EligibleCompressionFormats],
     *,
+    iteration_filter: list[str] | None = None,
     overwrite: bool = False,
     use_cpu: bool = False,
     keep_extracted: bool = False,
 ) -> None:
-    """Run compression benchmark on a directory or tar file."""
+    """Run compression benchmark on a directory or tar file.
+
+    Args:
+        source: Path to the source directory or tar file.
+        output_dir: Path to the output directory.
+        compression_formats: List of compression formats to use.
+        iteration_filter: List of strings to filter iterations by. For example, if you want to only
+            run it on the iteration 40k you'd pass "iteration_40000".
+        overwrite: Whether to overwrite existing files.
+        use_cpu: Whether to use CPU for compression.
+        keep_extracted: Whether to keep the extracted files.
+    """
     if not source.exists():
         msg = f"Source {source} does not exist."
         raise ValueError(msg)
@@ -38,6 +50,18 @@ def run_benchmark(
 
     # Process files within staging_dir
     ply_files = list(staging_dir.rglob("point_cloud.ply"))
+
+    if iteration_filter:
+        old_count = len(ply_files)
+        # Keep file if ANY strings in iteration_filter are present in the path
+        ply_files = [p for p in ply_files if any(it in str(p) for it in iteration_filter)]
+        logger.info(
+            "Filtered %d scenes down to %d using iteration filter %s",
+            old_count,
+            len(ply_files),
+            iteration_filter,
+        )
+
     if not ply_files:
         logger.warning("No point_cloud.ply files found in %s", staging_dir)
     else:
