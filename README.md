@@ -29,6 +29,12 @@ We also provide an apptainer image, to build it do the following:
 apptainer build --fakeroot --force image.sif apptainer_image.def
 ```
 
+To run the script then use:
+
+```bash
+    apptainer exec --nv image.sif uv run python -m compression_round_tripping.run_benchmark_compression --help
+```
+
 ## Usage
 
 ### Single File Round-Trip
