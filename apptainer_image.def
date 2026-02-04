@@ -6,11 +6,13 @@ From: ubuntu:24.04
     export DEBIAN_FRONTEND=noninteractive
 
     # 1. Update apt and install dependencies
-    # CRITICAL FIX: We added 'nodejs' and 'npm' here
     apt-get update 
     apt-get install -y curl ca-certificates nodejs npm
     apt-get install -y zlib1g-dev
     apt-get install -y nvtop
+    
+    # we need the following for web-gpu passthrough
+    apt-get install -y libvulkan1 mesa-vulkan-drivers vulkan-tools libgl1 libegl1
 
     # 2. Install uv
     # Download the installer and pipe to sh
@@ -21,7 +23,6 @@ From: ubuntu:24.04
     mv /root/.local/bin/uvx /usr/local/bin/uvx
 
     # 3. Install splat-transform
-    # This now works because we installed 'npm' in step 1
     npm install -g @playcanvas/splat-transform
 
     # 4. Cleanup to reduce image size

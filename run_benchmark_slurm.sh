@@ -43,11 +43,11 @@ for tar_file in "$DATA_DIR"/*.tar; do
     echo "Processing: $FILENAME"
 
     # Run Apptainer using ./image.sif directly
-    apptainer exec --nv --bind "$BIND_PATH" ./image.sif \
+    apptainer exec --nv --bind "$BIND_PATH" image.sif \
         uv run src/compression_round_tripping/run_benchmark_compression.py \
         --source "$tar_file" \
         --output_dir "$OUTPUT_DIR" \
-        --compression_formats "$COMPRESSION_FORMATS"
+        --compression_formats $COMPRESSION_FORMATS
         
     echo "Finished: $FILENAME"
     echo "----------------------------------------------------------------"

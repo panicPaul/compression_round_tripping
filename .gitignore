@@ -3,6 +3,8 @@ test_data
 benchmark_test
 test_output
 *.sif
+*.err
+*.out
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
