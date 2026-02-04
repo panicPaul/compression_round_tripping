@@ -22,6 +22,13 @@ This project uses `uv` for dependency management.
 uv sync
 ```
 
+### Optional: Apptainer Container
+We also provide an apptainer image, to build it do the following:
+
+```bash
+apptainer build --fakeroot --force image.sif apptainer_image.def
+```
+
 ## Usage
 
 ### Single File Round-Trip
