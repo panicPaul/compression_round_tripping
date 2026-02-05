@@ -5,6 +5,7 @@ test_output
 *.sif
 *.err
 *.out
+test_benchmark_env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

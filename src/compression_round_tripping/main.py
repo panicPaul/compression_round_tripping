@@ -10,32 +10,39 @@ from typing import Literal, get_args
 import spz
 import tyro
 from beartype import beartype
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel
 
 EligibleFileFormats = Literal["spz", "sog", "ply", "cply"]
 EligibleCompressionFormats = Literal["sog", "spz", "cply"]
 
 
+class PathInfo(BaseModel):
+    """Path information split into root and relative parts."""
+
+    root: str
+    relative: str
+
+
 class CompressionStatistics(BaseModel):
     """Statistics for the compression."""
 
-    original_size_mb: float
-    compressed_size_mb: float
+    original_size_bytes: int
+    compressed_size_bytes: int
     compression_ratio: float
     compression_time_seconds: float
     decompression_time_seconds: float
     compression_format: EligibleCompressionFormats
-    input_file: Path
-    compressed_file: Path
-    decompressed_file: Path
+    input_file: PathInfo
+    compressed_file: PathInfo
+    decompressed_file: PathInfo
     cpu_name: str
     gpu_name: str
 
     def __str__(self) -> str:
         """Print the statistics in a pretty format."""
         return (
-            f"Original size: {self.original_size_mb:.2f} MB\n"
-            f"Compressed size: {self.compressed_size_mb:.2f} MB\n"
+            f"Original size: {self.original_size_bytes} bytes\n"
+            f"Compressed size: {self.compressed_size_bytes} bytes\n"
             f"Compression ratio: {self.compression_ratio:.2f}\n"
             f"Compression time: {self.compression_time_seconds:.2f} seconds\n"
             f"Decompression time: {self.decompression_time_seconds:.2f} seconds\n"
@@ -46,11 +53,6 @@ class CompressionStatistics(BaseModel):
             f"CPU name: {self.cpu_name}\n"
             f"GPU name: {self.gpu_name}"
         )
-
-    @field_serializer("input_file", "compressed_file", "decompressed_file")
-    def path_serializer(self, v: Path) -> str:
-        """Serializes paths to absolute paths in string format."""
-        return str(v.absolute())
 
 
 class SpzOptions(BaseModel):
@@ -178,6 +180,9 @@ def round_trip_compression(  # noqa: C901, PLR0912
     decompressed_file: Path | None = None,
     overwrite: bool = False,
     use_cpu: bool = False,
+    input_path_info: PathInfo | None = None,
+    compressed_path_info: PathInfo | None = None,
+    decompressed_path_info: PathInfo | None = None,
 ) -> CompressionStatistics:
     """Compress and decompress a file using SOG compression.
 
@@ -231,15 +236,20 @@ def round_trip_compression(  # noqa: C901, PLR0912
     decompression_time = time.time() - start_time
 
     compression_statistics = CompressionStatistics(
-        original_size_mb=input_file.stat().st_size / 1024 / 1024,
-        compressed_size_mb=compressed_file.stat().st_size / 1024 / 1024,
+        original_size_bytes=input_file.stat().st_size,
+        compressed_size_bytes=compressed_file.stat().st_size,
         compression_ratio=input_file.stat().st_size / compressed_file.stat().st_size,
         compression_time_seconds=compression_time,
         decompression_time_seconds=decompression_time,
         compression_format=compression_format,
-        input_file=input_file,
-        compressed_file=compressed_file,
-        decompressed_file=decompressed_file,
+        input_file=input_path_info
+        or PathInfo(root=str(input_file.parent.absolute()), relative=input_file.name),
+        compressed_file=compressed_path_info
+        or PathInfo(root=str(compressed_file.parent.absolute()), relative=compressed_file.name),
+        decompressed_file=decompressed_path_info
+        or PathInfo(
+            root=str(decompressed_file.parent.absolute()), relative=decompressed_file.name
+        ),
         cpu_name=get_cpu_name(),
         gpu_name=get_gpu_name(),
     )

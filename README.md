@@ -84,3 +84,9 @@ output_dir/
           ├── point_cloud_spz.ply
           └── point_cloud_sog.ply
 ```
+
+
+uv run src/compression_round_tripping/run_benchmark_compression.py \
+    --source test_data/tar_test/gsplatSFM100_speedysplat_90_1.tar \
+    --output_dir test_data/output_verification \
+    --compression_formats cply spz

@@ -34,7 +34,7 @@ echo "================================================================"
 # --- Main Loop ---
 # We bind the parent directory so the container can reach both Input and Output dirs
 BIND_PATH="/data/cluster/users/schlack"
-# TAR_FILES= "$DATA_DIR"/*.tar
+# TAR_FILES=("$DATA_DIR"/*.tar)
 TAR_FILES=(
     "$DATA_DIR"/gsplat1M_speedyspa_erank_0_1.tar
     "$DATA_DIR"/gsplat1M_speedyspa_erank_50_1.tar
@@ -46,7 +46,7 @@ TAR_FILES=(
     "$DATA_DIR"/gsplat1M_speedyspa_erank_95_1.tar
 )
 
-for tar_file in "$TAR_FILES"; do
+for tar_file in "${TAR_FILES[@]}"; do
     # Check if file exists
     [ -e "$tar_file" ] || continue
     

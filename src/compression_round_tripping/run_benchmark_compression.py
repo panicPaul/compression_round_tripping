@@ -10,7 +10,11 @@ import tyro
 from beartype import beartype
 from tqdm import tqdm
 
-from compression_round_tripping.main import EligibleCompressionFormats, round_trip_compression
+from compression_round_tripping.main import (
+    EligibleCompressionFormats,
+    PathInfo,
+    round_trip_compression,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +25,7 @@ def run_benchmark(
     output_dir: Path,
     compression_formats: list[EligibleCompressionFormats],
     *,
-    iteration_filter: list[str] | None = None,
+    iteration_filter: list[str] | str | None = "iteration_40000",
     overwrite: bool = False,
     use_cpu: bool = False,
     keep_extracted: bool = False,
@@ -52,6 +56,8 @@ def run_benchmark(
     ply_files = list(staging_dir.rglob("point_cloud.ply"))
 
     if iteration_filter:
+        if isinstance(iteration_filter, str):
+            iteration_filter = [iteration_filter]
         old_count = len(ply_files)
         # Keep file if ANY strings in iteration_filter are present in the path
         ply_files = [p for p in ply_files if any(it in str(p) for it in iteration_filter)]
@@ -62,6 +68,9 @@ def run_benchmark(
             iteration_filter,
         )
 
+    # Prepare final archive path
+    final_tar_path = output_dir / f"{staging_dir_name}.tar"
+
     if not ply_files:
         logger.warning("No point_cloud.ply files found in %s", staging_dir)
     else:
@@ -71,10 +80,12 @@ def run_benchmark(
                 compression_formats,
                 overwrite=overwrite,
                 use_cpu=use_cpu,
+                input_root=source,
+                output_root=final_tar_path,
+                staging_root=staging_dir,
             )
 
     # Re-compress to tar
-    final_tar_path = output_dir / f"{staging_dir_name}.tar"
     logger.info("Creating final archive %s", final_tar_path)
     with tarfile.open(final_tar_path, "w") as tar:
         tar.add(staging_dir, arcname=staging_dir_name)
@@ -128,6 +139,9 @@ def _process_scene(
     *,
     overwrite: bool,
     use_cpu: bool,
+    input_root: Path,
+    output_root: Path,
+    staging_root: Path,
 ) -> None:
     """Run compression loop for a given PLY scene."""
     ply_dir = source_ply.parent
@@ -156,6 +170,18 @@ def _process_scene(
                 decompressed_file=final_decompressed_file,
                 overwrite=overwrite,
                 use_cpu=use_cpu,
+                input_path_info=PathInfo(
+                    root=str(input_root.absolute()),
+                    relative=str(source_ply.relative_to(staging_root)),
+                ),
+                compressed_path_info=PathInfo(
+                    root=str(output_root.absolute()),
+                    relative=str(final_compressed_file.relative_to(staging_root)),
+                ),
+                decompressed_path_info=PathInfo(
+                    root=str(output_root.absolute()),
+                    relative=str(final_decompressed_file.relative_to(staging_root)),
+                ),
             )
 
             # Merge Stats
